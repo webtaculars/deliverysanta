@@ -1,0 +1,5 @@
+{ 
+  "AWS_REGION": "us-west-2",
+  "STARTUP_SIGNUP_TABLE": "users",
+  "NEW_SIGNUP_TOPIC": "arn:aws:sns:us-west-2:176673374122:deliverysanta"
+}

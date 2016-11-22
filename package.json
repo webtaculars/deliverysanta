@@ -1,0 +1,28 @@
+{
+  "name": "santa",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Abhishek Gupta",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "bcrypt-nodejs": "0.0.3",
+    "body-parser": "^1.14.1",
+    "exec": "^0.2.1",
+    "express": "^4.13.3",
+    "format": "^0.2.1",
+    "jsonwebtoken": "^5.4.1",
+    "lodash": "^3.10.1",
+    "method-override": "^2.3.5",
+    "moment": "^2.11.0",
+    "mongoose": "^4.2.9",
+    "morgan": "^1.6.1",
+    "msg91": "0.0.6",
+    "msg91-sms": "^1.0.1",
+    "node-restful": "^0.2.4",
+    "validator": "^4.5.2"
+  }
+}
