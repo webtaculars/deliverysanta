@@ -8,94 +8,99 @@ var Admin = require('../models/admin');
 var DeliveryBoy = require('../models/deliveryBoy');
 var GetId = require('../models/orderid');
 var config = require('../../config');
-var moment=require('moment');
-var format=require('format');
+var moment = require('moment');
+var format = require('format');
 var secretKey = config.secretKey;
-var jsonwebtoken =require('jsonwebtoken');
-var msg91=require('msg91-sms');
-var random = require("random-js")(); // uses the nativeMath engine
+var jsonwebtoken = require('jsonwebtoken');
+var msg91 = require('msg91-sms');
+var random = require("random-js")();
 var Otp = require('../models/otp');
 var moment = require('moment-timezone');
 var Details = require('../models/details');
 
-function createUserToken(user){
+function createUserToken(user) {
     var token = jsonwebtoken.sign({
         id: user._id,
-        name:user.name,
+        name: user.name,
         email: user.email,
         college: user.college,
-        contactNo:user.contactNo,
-        tag:"user"
-    },secretKey,{expiresInMinute: 1440});
+        contactNo: user.contactNo,
+        tag: "user"
+    }, secretKey, { expiresInMinute: 1440 });
     return token;
 }
 
-function createAdminToken(admin){
+function createAdminToken(admin) {
     var token = jsonwebtoken.sign({
         id: admin._id,
-        username:admin.username,
-        tag:"admin"
-    },secretKey,{expiresInMinute: 1440});
+        username: admin.username,
+        tag: "admin"
+    }, secretKey, { expiresInMinute: 1440 });
     return token;
 }
-function createRestaurantToken(rest){
+
+function createRestaurantToken(rest) {
     var token = jsonwebtoken.sign({
         id: rest._id,
-        tag:"restaurant",
+        tag: "restaurant",
         nameOfRestaurant: rest.nameOfRestaurant,
-        ownerOfRestaurant:rest.ownerOfRestaurant,
+        ownerOfRestaurant: rest.ownerOfRestaurant,
         college: rest.college,
-        contactNo:rest.contactNo,
-        address:rest.address
-    },secretKey,{expiresInMinute: 1440});
+        contactNo: rest.contactNo,
+        address: rest.address
+    }, secretKey, { expiresInMinute: 1440 });
 
     return token;
 }
 
-function createDeliveryBoyToken(deliveryBoy){
+function createDeliveryBoyToken(deliveryBoy) {
     var token = jsonwebtoken.sign({
         id: deliveryBoy._id,
-        name:deliveryBoy.name,
+        name: deliveryBoy.name,
         delid: deliveryBoy.delid,
         timeOfDelivery: deliveryBoy.timeOfDelivery,
-        contactNo:deliveryBoy.contactNo,
+        contactNo: deliveryBoy.contactNo,
         college: deliveryBoy.college,
-        tag:"deliveryboy"
-    },secretKey,{expiresInMinute: 1440});
+        tag: "deliveryboy"
+    }, secretKey, { expiresInMinute: 1440 });
 
     return token;
 
 }
-function ifUser(tag){
-    if(tag=="user"){
+
+function ifUser(tag) {
+    if (tag == "user") {
         return true;
     }
     return false;
 }
-function ifAdmin(tag){
-    if(tag=="admin"){
+
+function ifAdmin(tag) {
+    if (tag == "admin") {
         return true;
     }
     return false;
 }
-function ifRestaurant(tag){
-    if(tag=="restaurant"){
+
+function ifRestaurant(tag) {
+    if (tag == "restaurant") {
         return true;
     }
     return false;
 }
-function ifDeliveryBoy(tag){
-    if(tag=="deliveryboy"){
+
+function ifDeliveryBoy(tag) {
+    if (tag == "deliveryboy") {
         return true;
     }
     return false;
 }
-module.exports= function(app,express){
+module.exports = function(app, express) {
 
 
-    var api= express.Router();
+    var api = express.Router();
 
-   //                 //
+    //                 //
     //    ADMIN        //
     //                 //
 
@@ -109,33 +114,33 @@ module.exports= function(app,express){
 
 
 
-    api.post('/adminlogin',function(req,res){
+    api.post('/adminlogin', function(req, res) {
 
         Admin.findOne({
             username: req.body.username
-        }).select('username password').exec(function(err,admin){
-            if(err) throw err;
+        }).select('username password').exec(function(err, admin) {
+            if (err) throw err;
 
-            if(!admin){
-                res.send({ message: "admin does not exist"});
+            if (!admin) {
+                res.send({ message: "admin does not exist" });
 
-            }else if(admin){
+            } else if (admin) {
                 var validPassword = admin.comparePassword(req.body.password);
-                if(!validPassword){
-                    res.send({message: "Invalid Pass"});
-                }else {
+                if (!validPassword) {
+                    res.send({ message: "Invalid Pass" });
+                } else {
                     var token = createAdminToken(admin);
                     res.json({
-                        success:true,
+                        success: true,
                         message: "Successfully login",
-                        token:token
+                        token: token
                     });
                 }
             }
         });
     });
 
-  /*  //create admin
+    /*  //create admin
     api.post('/createadmin',function(req,res){
         var admin = new admin({
             username: req.body.username,
@@ -156,29 +161,29 @@ module.exports= function(app,express){
         });
     });
 
-*/    //                 //
+*/ //                 //
     //    USERS        //
     //                 //
     //SIGNUP USER
-    api.post('/signup',function(req,res){
+    api.post('/signup', function(req, res) {
         var value = random.integer(1000, 9999);
 
         var user = new User({
             name: req.body.name,
             email: req.body.email,
             college: req.body.college,
-            contactNo:req.body.contactNo,
+            contactNo: req.body.contactNo,
             password: req.body.password,
-            tag:'user',
+            tag: 'user',
             active: '0',
             value: value
         });
 
 
         var token = createUserToken(user);
-        user.save(function(err){
-            if(err){
-                res.json({'message':'User already exists'});
+        user.save(function(err) {
+            if (err) {
+                res.json({ 'message': 'User already exists' });
                 return;
             }
             res.json({
@@ -186,14 +191,14 @@ module.exports= function(app,express){
                 message: 'User created',
                 token: token
             });
-            var authkey = '101648AeV6o8poG569d48e4';
+            var authkey = 'my_auth_key';
             var number = req.body.contactNo;
-            var message = 'Hey. Your OTP is '+ value +'. Thanks.';
+            var message = 'Hey. Your OTP is ' + value + '. Thanks.';
             var senderid = 'DSANTA';
             var route = '4';
             var dialcode = '91';
 
-            msg91.sendOne(authkey, number, message, senderid, route, dialcode, function (response) {
+            msg91.sendOne(authkey, number, message, senderid, route, dialcode, function(response) {
 
                 console.log(response);
             });
@@ -202,12 +207,12 @@ module.exports= function(app,express){
     });
 
     //VERIFY OTP
-    api.post('/verifyotp', function (req, res) {
+    api.post('/verifyotp', function(req, res) {
         var number = req.body.contactNo;
         var value = req.body.value;
-        var email =req.body.email;
-        User.find({email: email, contactNo:number,value:value}).update({$set:{'active':'1'}},function (err, user) {
-            if(err){
+        var email = req.body.email;
+        User.find({ email: email, contactNo: number, value: value }).update({ $set: { 'active': '1' } }, function(err, user) {
+            if (err) {
                 res.send(err);
                 return;
             }
@@ -217,28 +222,28 @@ module.exports= function(app,express){
     });
 
     //RESEND OTP
-    api.post('/resendotp', function (req, res) {
-        var number =req.body.contactNo;
+    api.post('/resendotp', function(req, res) {
+        var number = req.body.contactNo;
         var value = random.integer(1000, 9999);
         var value1 = value;
-        var email=req.body.email;
+        var email = req.body.email;
 
-        var authkey = '101648AeV6o8poG569d48e4';
-        var message = 'Hey. Your one time password is '+ value1 +'. Thanks.';
+        var authkey = 'my_auth_key';
+        var message = 'Hey. Your one time password is ' + value1 + '. Thanks.';
         var senderid = 'DSANTA';
         var route = '4';
         var dialcode = '91';
 
-        msg91.sendOne(authkey, number, message, senderid, route, dialcode, function (response) {
+        msg91.sendOne(authkey, number, message, senderid, route, dialcode, function(response) {
 
         });
 
-        User.find({email:email, contactNo:number}).update({$set:{'value':value}},function (err, user) {
-            if(err){
+        User.find({ email: email, contactNo: number }).update({ $set: { 'value': value } }, function(err, user) {
+            if (err) {
                 res.send(err);
                 return;
             }
-            res.json({'message':"New OTP generated"});
+            res.json({ 'message': "New OTP generated" });
         });
 
     })
@@ -246,33 +251,35 @@ module.exports= function(app,express){
 
 
     //LOGIN USER
-    api.post('/login',function(req,res){
+    api.post('/login', function(req, res) {
 
         User.findOne({
             contactNo: req.body.contactNo
-        }).select('name email college active contactNo password').exec(function(err,user) {
+        }).select('name email college active contactNo password').exec(function(err, user) {
             if (err) throw err;
 
             if (!user) {
-                res.send({message: "User does not exist"});
+                res.send({ message: "User does not exist" });
 
-            }else if(user && user.active=='0'){
+            } else if (user && user.active == '0') {
 
-                res.json({message: "User is not verified",
-                            email: user.email,
-                            contactNo: user.contactNo});
+                res.json({
+                    message: "User is not verified",
+                    email: user.email,
+                    contactNo: user.contactNo
+                });
 
-            }else if(user){
+            } else if (user) {
                 var validPassword = user.comparePassword(req.body.password);
-                if(!validPassword){
-                    res.send({message: "Invalid Email/Password"});
-                }else {
+                if (!validPassword) {
+                    res.send({ message: "Invalid Email/Password" });
+                } else {
                     var token = createUserToken(user);
                     res.json({
-                        success:true,
+                        success: true,
                         message: "Successfully login",
 
-                        token:token
+                        token: token
                     });
                 }
             }
@@ -280,27 +287,27 @@ module.exports= function(app,express){
     });
 
     //LOGIN RESTAURANT
-    api.post('/loginrest',function(req,res){
+    api.post('/loginrest', function(req, res) {
 
         Restaurant.findOne({
             nameOfRestaurant: req.body.nameOfRestaurant
-        }).select('nameOfRestaurant college password contactNo').exec(function(err,rest){
-            if(err) throw err;
+        }).select('nameOfRestaurant college password contactNo').exec(function(err, rest) {
+            if (err) throw err;
 
-            if(!rest){
-                res.send({ message: "Rest does not exist"});
+            if (!rest) {
+                res.send({ message: "Rest does not exist" });
 
-            }else if(rest){
+            } else if (rest) {
                 var validPassword = rest.comparePassword(req.body.password);
-                if(!validPassword){
-                    res.send({message: "Invalid Pass"});
-                }else {
+                if (!validPassword) {
+                    res.send({ message: "Invalid Pass" });
+                } else {
                     var token = createRestaurantToken(rest);
 
                     res.json({
-                        success:true,
+                        success: true,
                         message: "Successfully login",
-                        token:token
+                        token: token
                     });
                 }
             }
@@ -308,46 +315,37 @@ module.exports= function(app,express){
     });
 
     //DELIVERY TIME
-    api.post('/deliverytime', function (req, res) {
-        var current_time = new moment ().tz("Asia/Kolkata").format("HHmm");
-        if(current_time>1945){
-            res.json([{message:'Time Exceeded',deliveryTime:'21:30'}]);
-        }
-        else if(current_time<1945){
-            res.json([{message:'Time Available',deliveryTime:'21:30'}]);
+    api.post('/deliverytime', function(req, res) {
+        var current_time = new moment().tz("Asia/Kolkata").format("HHmm");
+        if (current_time > 1945) {
+            res.json([{ message: 'Time Exceeded', deliveryTime: '21:30' }]);
+        } else if (current_time < 1945) {
+            res.json([{ message: 'Time Available', deliveryTime: '21:30' }]);
         }
 
     });
 
-    api.post('/checkdeliveryprice', function (req, res) {
-        if(req.body.totalAmount>0 && req.body.totalAmount <= 150)
-        {
-            res.json({deliveryprice:'30'})
-        }
-        else if(req.body.totalAmount>150 && req.body.totalAmount<=300)
-        {
-            res.json({deliveryprice:'40'})
-        }
-        else if(req.body.totalAmount>300 && req.body.totalAmount<=500)
-        {
-            res.json({deliveryprice:'50'})
-        }
-        else if(req.body.totalAmount>500)
-        {
-            res.json({deliveryprice:req.body.totalAmount/10}
+    api.post('/checkdeliveryprice', function(req, res) {
+        if (req.body.totalAmount > 0 && req.body.totalAmount <= 150) {
+            res.json({ deliveryprice: '30' })
+        } else if (req.body.totalAmount > 150 && req.body.totalAmount <= 300) {
+            res.json({ deliveryprice: '40' })
+        } else if (req.body.totalAmount > 300 && req.body.totalAmount <= 500) {
+            res.json({ deliveryprice: '50' })
+        } else if (req.body.totalAmount > 500) {
+            res.json({ deliveryprice: req.body.totalAmount / 10 }
 
-                );
-        }
-        else{
-            res.json({deliveryprice: '0'})
+            );
+        } else {
+            res.json({ deliveryprice: '0' })
         }
 
     });
 
     //Show all college names
-    api.get('/allcollegename', function (req, res) {
-        Allcollege.find({},{"name":1,_id:0}, function (err, allcollege) {
-            if(err){
+    api.get('/allcollegename', function(req, res) {
+        Allcollege.find({}, { "name": 1, _id: 0 }, function(err, allcollege) {
+            if (err) {
                 res.send(err);
                 return;
             }
@@ -356,22 +354,21 @@ module.exports= function(app,express){
     });
 
     //SEARCH THE CITY AND GET THE NAME OF COLLEGES IN THAT CITY
-    api.post('/collegesinacity',function(req,res){
-        Allcollege.find({city:req.body.city},function(err,college){
-            if(err){
+    api.post('/collegesinacity', function(req, res) {
+        Allcollege.find({ city: req.body.city }, function(err, college) {
+            if (err) {
                 res.send(err);
                 return;
-            }
-            else
+            } else
                 res.json(college);
         })
     });
 
     //SHOW ALL RESTAURANTS WHICH ARE AVAILABLE
-    api.get('/allrestaurant',function(req,res){
+    api.get('/allrestaurant', function(req, res) {
 
-        Restaurant.find({status:"1"}, function (err,allrestaurant) {
-            if(err){
+        Restaurant.find({ status: "1" }, function(err, allrestaurant) {
+            if (err) {
                 res.send(err);
                 return;
             }
@@ -382,28 +379,27 @@ module.exports= function(app,express){
 
     //FIND RESTAURANT BY COLLEGE NAME
     api.route('/findrestbycollege')
-        .post(function (req, res) {
+        .post(function(req, res) {
             Restaurant.find({
-                    college: req.body.college
-                },function(err, college) {
-                    if (err) {
-                        res.send(err);
-                        return;
-                    }
-                    res.json(college);
+                college: req.body.college
+            }, function(err, college) {
+                if (err) {
+                    res.send(err);
+                    return;
                 }
-            )
+                res.json(college);
+            })
         });
 
 
 
 
     // DISPLAY TYPES OF DISHES OF A PARTICULAR RESTAURANT
-    api.post('/typeofdish',function(req,res){
+    api.post('/typeofdish', function(req, res) {
         Menu.find({
             restaurant: req.body.restaurant
-        },{"typeOfDish":1,_id:0},function(err, menu){
-            if(err){
+        }, { "typeOfDish": 1, _id: 0 }, function(err, menu) {
+            if (err) {
                 res.send(err);
                 return;
             }
@@ -426,20 +422,20 @@ module.exports= function(app,express){
     });
 
     // DISPLAY MENU OF A PARTICULAR RESTAURANT BY NAME OF REST and TYPE OF DISH
-    api.post('/menubyrestnametype',function(req,res){
+    api.post('/menubyrestnametype', function(req, res) {
         Menu.find({
             restaurant: req.body.restaurant,
             typeOfDish: req.body.typeOfDish,
-            dishStatus:'1'
-        },function(err, menu){
-            if(err){
+            dishStatus: '1'
+        }, function(err, menu) {
+            if (err) {
                 res.send(err);
                 return;
             }
             res.json(menu);
         });
     });
-	
+
 
 
 
@@ -453,27 +449,27 @@ module.exports= function(app,express){
 
 
     //LOGIN DELIVERY BOY
-    api.post('/logindeliveryboy',function(req,res){
+    api.post('/logindeliveryboy', function(req, res) {
 
         DeliveryBoy.findOne({
             name: req.body.name
-        }).select('name college delid timeOfDelivery password').exec(function(err,deliveryBoy){
-            if(err) throw err;
+        }).select('name college delid timeOfDelivery password').exec(function(err, deliveryBoy) {
+            if (err) throw err;
 
-            if(!deliveryBoy){
-                res.send({ message: "Delivery Boy does not exist"});
+            if (!deliveryBoy) {
+                res.send({ message: "Delivery Boy does not exist" });
 
-            }else if(deliveryBoy){
+            } else if (deliveryBoy) {
                 var validPassword = deliveryBoy.comparePassword(req.body.password);
-                if(!validPassword){
-                    res.send({message: "Invalid Password"});
-                }else {
+                if (!validPassword) {
+                    res.send({ message: "Invalid Password" });
+                } else {
                     var token = createDeliveryBoyToken(deliveryBoy);
 
                     res.json({
-                        success:true,
+                        success: true,
                         message: "Successfully login",
-                        token:token
+                        token: token
                     });
                 }
             }
@@ -481,12 +477,12 @@ module.exports= function(app,express){
     });
 
     // DISPLAY MENU OF A PARTICULAR RESTAURANT BY NAME OF REST
-    api.post('/menubyrestname',function(req,res){
+    api.post('/menubyrestname', function(req, res) {
 
         Menu.find({
             restaurant: req.body.nameOfRestaurant,
-			dishStatus: '1'
-        }, function (err, menu) {
+            dishStatus: '1'
+        }, function(err, menu) {
             if (err) {
                 res.send(err);
                 return;
@@ -495,12 +491,12 @@ module.exports= function(app,express){
         });
 
     });
-	// DISPLAY MENU OF A PARTICULAR RESTAURANT BY NAME OF REST TO A RESTAURANT
-    api.post('/menubyrestnametorest',function(req,res){
+    // DISPLAY MENU OF A PARTICULAR RESTAURANT BY NAME OF REST TO A RESTAURANT
+    api.post('/menubyrestnametorest', function(req, res) {
 
         Menu.find({
             restaurant: req.body.nameOfRestaurant,
-        }, function (err, menu) {
+        }, function(err, menu) {
             if (err) {
                 res.send(err);
                 return;
@@ -510,23 +506,23 @@ module.exports= function(app,express){
 
     });
 
-//
-// Middleware
-    api.use(function (req,res,next) {
+    //
+    // Middleware
+    api.use(function(req, res, next) {
         var token = req.body.token || req.param('token') || req.headers['x-access-token'];
 
-        if(token){
-            jsonwebtoken.verify(token, secretKey, function(err, decoded){
-                if(err){
-                    res.status(403).send({success: false, message: "Failed to connect"});
-                }else {
-                    req.decoded= decoded;
+        if (token) {
+            jsonwebtoken.verify(token, secretKey, function(err, decoded) {
+                if (err) {
+                    res.status(403).send({ success: false, message: "Failed to connect" });
+                } else {
+                    req.decoded = decoded;
                     next();
                 }
             });
-        }else {
+        } else {
 
-            res.status(403).send({success: false, message: "false token"});
+            res.status(403).send({ success: false, message: "false token" });
         }
 
     });
@@ -536,18 +532,17 @@ module.exports= function(app,express){
     //    AFTER LOGIN  //
     //                 //
     //SHOW ALL USERS
-    api.get('/users',function(req,res){
-        var result=ifAdmin(req.decoded.tag);
-        if(result == true){
-            User.find({}, function (err,users) {
-                if(err){
+    api.get('/users', function(req, res) {
+        var result = ifAdmin(req.decoded.tag);
+        if (result == true) {
+            User.find({}, function(err, users) {
+                if (err) {
                     res.send(err);
                     return;
                 }
                 res.json(users);
             });
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
 
@@ -555,78 +550,74 @@ module.exports= function(app,express){
     });
 
     //DISPLAY RESTAURANTS AVAILABLE TO USER AFTER SIGNING IN
-    api.get('/getrestbyuser',function(req,res){
-        var result=ifUser(req.decoded.tag);
-        if(result){
-            var coll=req.decoded.college;
-            Restaurant.find({college:coll,dishStatus:'1'},function(err,rest){
-                if(err){
+    api.get('/getrestbyuser', function(req, res) {
+        var result = ifUser(req.decoded.tag);
+        if (result) {
+            var coll = req.decoded.college;
+            Restaurant.find({ college: coll, dishStatus: '1' }, function(err, rest) {
+                if (err) {
                     res.send(err);
                     return;
                 }
                 res.json(rest);
             })
-        }
-        else
+        } else
             res.send("You can't access this api");
     });
 
     //SHOW ALL COLLEGES
-    api.get('/allcollege', function (req, res) {
-        var result=ifAdmin(req.decoded.tag);
-        if(result == true){
-            Allcollege.find({}, function (err,allcollege) {
-                if(err){
+    api.get('/allcollege', function(req, res) {
+        var result = ifAdmin(req.decoded.tag);
+        if (result == true) {
+            Allcollege.find({}, function(err, allcollege) {
+                if (err) {
                     res.send(err);
                     return;
                 }
                 res.json(allcollege);
             });
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
 
     });
     //SHOW ALL DELIVERY BOY
-    api.get('/alldeliveryboy',function(req,res){
-        var result=ifAdmin(req.decoded.tag);
-        if(result == true){
-            DeliveryBoy.find({}, function (err,alldeliveryboy) {
-                if(err){
+    api.get('/alldeliveryboy', function(req, res) {
+        var result = ifAdmin(req.decoded.tag);
+        if (result == true) {
+            DeliveryBoy.find({}, function(err, alldeliveryboy) {
+                if (err) {
                     res.send(err);
                     return;
                 }
                 res.json(alldeliveryboy);
             });
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
 
 
     });
     //SIGNUP DELIVERY BOY
-    api.post('/signupdeliveryboy',function(req,res){
-        var result=ifAdmin(req.decoded.tag);
-        if(result == true) {
+    api.post('/signupdeliveryboy', function(req, res) {
+        var result = ifAdmin(req.decoded.tag);
+        if (result == true) {
             var deliveryBoy = new DeliveryBoy({
                 name: req.body.name,
                 college: req.body.college,
                 password: req.body.password,
-                delid:req.body.delid,
-                contactNo:req.body.contactNo,
-                timeOfDelivery:req.body.timeOfDelivery
+                delid: req.body.delid,
+                contactNo: req.body.contactNo,
+                timeOfDelivery: req.body.timeOfDelivery
             });
-            deliveryBoy.save(function (err) {
+            deliveryBoy.save(function(err) {
                 if (err) {
                     res.send(err);
                     return;
                 }
-                res.json({message: 'Delivery boy added'});
+                res.json({ message: 'Delivery boy added' });
             });
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
 
@@ -636,54 +627,47 @@ module.exports= function(app,express){
 
 
     api.route('/addorder')
-        .post(function(req,res){
-            var result=ifUser(req.decoded.tag);
-            if(result == true){
+        .post(function(req, res) {
+            var result = ifUser(req.decoded.tag);
+            if (result == true) {
                 var id;
                 var date = new Date();
                 date = moment(date).tz("Asia/Kolkata").format('YYYYMMDD');
-                if(req.body.totalAmount >0 && req.body.totalAmount<=150)
-                {
+                if (req.body.totalAmount > 0 && req.body.totalAmount <= 150) {
                     var finalAmount = Number(req.body.totalAmount) + 30;
-                }
-                else if(req.body.totalAmount >150 && req.body.totalAmount<=300)
-                {
+                } else if (req.body.totalAmount > 150 && req.body.totalAmount <= 300) {
                     var finalAmount = Number(req.body.totalAmount) + 40;
-                }
-                else if(req.body.totalAmount >300 && req.body.totalAmount<=500)
-                {
+                } else if (req.body.totalAmount > 300 && req.body.totalAmount <= 500) {
                     var finalAmount = Number(req.body.totalAmount) + 50;
-                }
-                else
-                {
-                    var finalAmount = Number(req.body.totalAmount) + Number(req.body.totalAmount)/10;
+                } else {
+                    var finalAmount = Number(req.body.totalAmount) + Number(req.body.totalAmount) / 10;
                 }
 
-                GetId.findOneAndUpdate({date:date}, { $inc: { orderNo: 1 } },                // function of assigning order id
+                GetId.findOneAndUpdate({ date: date }, { $inc: { orderNo: 1 } }, // function of assigning order id
 
 
-                    function(err,getid){
+                    function(err, getid) {
 
-                        if(err)
+                        if (err)
                             console.log(err);
-                        else if(getid)
+                        else if (getid)
                             console.log(getid.orderNo);
 
                     });
 
-                GetId.find({'date':date}, function (err, getid) {
+                GetId.find({ 'date': date }, function(err, getid) {
                     if (err)
                         console.log(err);
-                    else if (getid[0]==null) {
-                        var oid=new GetId();
+                    else if (getid[0] == null) {
+                        var oid = new GetId();
                         //var today = new Date();
                         //today = moment(date).format('YYYYMMDD');
-                        oid.date=date;
-                        oid.orderNo=1;
+                        oid.date = date;
+                        oid.orderNo = 1;
 
-                        oid.save(function(err){
+                        oid.save(function(err) {
 
-                            if(err)
+                            if (err)
                                 console.log(err);
                             else {
                                 console.log("orderNo value setup successful , new order for today created");
@@ -691,34 +675,34 @@ module.exports= function(app,express){
                         });
                         var value = random.integer(1, 100);
 
-                        id='LNM'+oid.date+oid.orderNo;
-                        var userid=req.decoded.id;
-                        var username=req.decoded.name
-                        console.log('id genreated is '+id);
+                        id = 'LNM' + oid.date + oid.orderNo;
+                        var userid = req.decoded.id;
+                        var username = req.decoded.name
+                        console.log('id genreated is ' + id);
                         var order = new Order({
-                            orderBy:username ,
+                            orderBy: username,
                             username: userid,
                             college: req.decoded.college,
                             userContactNo: req.decoded.contactNo,
                             restaurant: req.body.restaurant,
                             nameOfDish: req.body.nameOfDish,
-                            quantityOfDish:req.body.quantityOfDish,
-                            totalAmount:req.body.totalAmount,
-                            timeOfDelivery:req.body.timeOfDelivery,
-                            clgInitials:'LNM',
-                            contactNo:req.body.contactNo,
+                            quantityOfDish: req.body.quantityOfDish,
+                            totalAmount: req.body.totalAmount,
+                            timeOfDelivery: req.body.timeOfDelivery,
+                            clgInitials: 'LNM',
+                            contactNo: req.body.contactNo,
                             specialInstruction: req.body.specialInstruction,
                             date: date,
                             status: '-2',
-                            orderid:id,
-                            uniqueCode:value,
-                            orderNo:oid.orderNo,
+                            orderid: id,
+                            uniqueCode: value,
+                            orderNo: oid.orderNo,
                             finalAmount: finalAmount,
-                            bags:'1'
+                            bags: '1'
 
                         });
-                        order.save(function(err){
-                            if(err){
+                        order.save(function(err) {
+                            if (err) {
                                 res.send(err);
                                 return
                             }
@@ -726,15 +710,14 @@ module.exports= function(app,express){
                             res.json(order);
 
                         })
-                    }
-                    else {
+                    } else {
                         var value = random.integer(100, 999);
 
                         console.log("orderNo value setup successful");
-                        id='LNM'+getid[0].date+getid[0].orderNo;
-                        console.log('id genreated is '+id);
-                        var userid =req.decoded.id;
-                        var username=req.decoded.name
+                        id = 'LNM' + getid[0].date + getid[0].orderNo;
+                        console.log('id genreated is ' + id);
+                        var userid = req.decoded.id;
+                        var username = req.decoded.name
 
                         var order = new Order({
                             orderBy: username,
@@ -743,22 +726,22 @@ module.exports= function(app,express){
                             userContactNo: req.decoded.contactNo,
                             restaurant: req.body.restaurant,
                             nameOfDish: req.body.nameOfDish,
-                            quantityOfDish:req.body.quantityOfDish,
-                            totalAmount:req.body.totalAmount,
-                            timeOfDelivery:req.body.timeOfDelivery,
+                            quantityOfDish: req.body.quantityOfDish,
+                            totalAmount: req.body.totalAmount,
+                            timeOfDelivery: req.body.timeOfDelivery,
                             status: '-2',
-                            contactNo:req.body.contactNo,
+                            contactNo: req.body.contactNo,
                             specialInstruction: req.body.specialInstruction,
-                            clgInitials:'LNM',
-                            orderid:id,
+                            clgInitials: 'LNM',
+                            orderid: id,
                             date: date,
-                            uniqueCode:value,
+                            uniqueCode: value,
                             orderNo: getid[0].orderNo,
                             finalAmount: finalAmount,
-                            bags:'1'
+                            bags: '1'
                         });
-                        order.save(function(err){
-                            if(err){
+                        order.save(function(err) {
+                            if (err) {
                                 res.send(err);
                                 return
                             }
@@ -768,9 +751,7 @@ module.exports= function(app,express){
                     }
                 });
 
-            }
-
-            else
+            } else
                 res.send("You can't access this api.");
             return;
 
@@ -778,105 +759,85 @@ module.exports= function(app,express){
 
     //UPDATE AVAILABILITY OF RESTAURANTS                                ////////added//////////
     api.route('/updatereststatus')
-        .post(function (req, res) {
-            var result=ifRestaurant(req.decoded.tag);
-            if(result == true){
+        .post(function(req, res) {
+            var result = ifRestaurant(req.decoded.tag);
+            if (result == true) {
 
-                Restaurant.update({"status": req.body.status},{$set:{'status': req.body.newstatus}}, function (err, rest) {
-                    if(err){
+                Restaurant.update({ "status": req.body.status }, { $set: { 'status': req.body.newstatus } }, function(err, rest) {
+                    if (err) {
                         res.send(err);
                         return;
                     }
                     res.json(rest);
                 })
-            }
-            else
+            } else
                 res.send("You can't access this api");
             return;
 
         });
-    //ASSIGN DELID TO THE DELIVERY BOY
-    // api.post()
 
-
-    //
-    ////SEND ORDER TO RESTAURANTS
-    //    api.route('/sendorder')
-    //    .get(function(req,res){
-    //        Order.find({orderBy: req.decoded.id, status:'-2'},function(err, orders){
-    //                if(err){
-    //                    res.send(err);
-    //                    return;
-    //                }
-    //                res.json(orders);
-    //
-    //        });
-    //    });
     //GET ORDER BY ADMIN FROM ALL THE USERS
     api.route('/getorderbyadmin')
-        .post(function(req,res){
-            var result=ifAdmin(req.decoded.tag);
+        .post(function(req, res) {
+            var result = ifAdmin(req.decoded.tag);
             var date = new Date();
             date = moment(date).tz("Asia/Kolkata").format('YYYYMMDD');
 
-            if(result == true){
-                Order.find({date: date},function(err, orders){
-                    if(err){
+            if (result == true) {
+                Order.find({ date: date }, function(err, orders) {
+                    if (err) {
                         res.send(err);
                         return;
                     }
                     res.json(orders);
                 });
-            }
-            else
+            } else
                 res.send("You can't access this api");
             return;
 
         });
     //ACCEPT OR DECLINE BY ADMIN
-    api.post('/statuschangebyadmin', function (req, res) {
-        var result=ifAdmin(req.decoded.tag);
-        if(result == true){
-            Order.find({orderid:req.body.orderid}).update({$set:{'status': req.body.status}}, function (err, status) {
-                if(err){
+    api.post('/statuschangebyadmin', function(req, res) {
+        var result = ifAdmin(req.decoded.tag);
+        if (result == true) {
+            Order.find({ orderid: req.body.orderid }).update({ $set: { 'status': req.body.status } }, function(err, status) {
+                if (err) {
                     res.send(err);
                     return;
                 }
-                 if(req.body.status == '-1') {
-                    var authkey = '101648AeV6o8poG569d48e4';
-                     var number = req.body.contactNo;
-                     var message = 'Hey. New order has arrived. Please take a look at it. Thanks.';
-                     var senderid = 'DSANTA';
+                if (req.body.status == '-1') {
+                    var authkey = 'my_auth_key';
+                    var number = req.body.contactNo;
+                    var message = 'Hey. New order has arrived. Please take a look at it. Thanks.';
+                    var senderid = 'DSANTA';
                     var route = '4';
                     var dialcode = '91';
 
-                    msg91.sendOne(authkey, number, message, senderid, route, dialcode, function (response) {
+                    msg91.sendOne(authkey, number, message, senderid, route, dialcode, function(response) {
 
                         console.log(response);
                     });
 
 
+                } else if (req.body.status == '-3') {
+                    var authkey = 'my_auth_key';
+                    var number = req.body.userContactNo;
+                    var message = 'Hey. Your order has been rejected by admin. Please contact the customer representative at 7611048225. Thanks.';
+                    var senderid = 'DSANTA';
+                    var route = '4';
+                    var dialcode = '91';
+
+                    msg91.sendOne(authkey, number, message, senderid, route, dialcode, function(response) {
+
+                        console.log(response);
+                    });
+
                 }
-                else if(req.body.status == '-3'){
-                     var authkey = '101648AeV6o8poG569d48e4';
-                     var number = req.body.userContactNo;
-                     var message = 'Hey. Your order has been rejected by admin. Please contact the customer representative at 7611048225. Thanks.';
-                     var senderid = 'DSANTA';
-                     var route = '4';
-                     var dialcode = '91';
-
-                     msg91.sendOne(authkey, number, message, senderid, route, dialcode, function (response) {
-
-                         console.log(response);
-                     });
-
-                 }
-                res.json({message: 'Status Changed'});
+                res.json({ message: 'Status Changed' });
 
             });
 
-        }
-        else {
+        } else {
             res.send("You can't access this api");
         }
         return;
@@ -885,95 +846,90 @@ module.exports= function(app,express){
 
     //   GET ORDER BY THE REST APPROVED BY ADMIN
     api.route('/getorderbyrest')
-        .post(function(req,res){
-            var result=ifRestaurant(req.decoded.tag);
+        .post(function(req, res) {
+            var result = ifRestaurant(req.decoded.tag);
             var date = new Date();
             date = moment(date).tz("Asia/Kolkata").format('YYYYMMDD');
 
-            if(result == true){
+            if (result == true) {
 
-            Order.find({date:date,restaurant: req.decoded.nameOfRestaurant,$or:[{status : '0'},{status: '-1'}]},function(err, orders){
-                if(err){
-                    res.send(err);
-                    return;
-                }
-                res.json(orders);
-            });
-        }
-            else
+                Order.find({ date: date, restaurant: req.decoded.nameOfRestaurant, $or: [{ status: '0' }, { status: '-1' }] }, function(err, orders) {
+                    if (err) {
+                        res.send(err);
+                        return;
+                    }
+                    res.json(orders);
+                });
+            } else
                 res.send("You can't access this api");
         });
 
 
     //ACCEPT OR DECLINE BY RESTAURANT
-    api.post('/statuschangebyrest', function (req, res) {
-        var result=ifRestaurant(req.decoded.tag);
-        if(result == true){
-            Order.find({orderid:req.body.orderid}).update({$set:{'status': req.body.status}}, function (err, status) {
-                if(err){
+    api.post('/statuschangebyrest', function(req, res) {
+        var result = ifRestaurant(req.decoded.tag);
+        if (result == true) {
+            Order.find({ orderid: req.body.orderid }).update({ $set: { 'status': req.body.status } }, function(err, status) {
+                if (err) {
                     res.send(err);
                     return;
                 }
-                Order.find({orderid:req.body.orderid},function(err,order){
-                        if(err){
+                Order.find({ orderid: req.body.orderid }, function(err, order) {
+                        if (err) {
                             res.send(err);
                             return
                         }
-                        var userid=order[0].orderBy;
-                        var id=order[0].orderid;
+                        var userid = order[0].orderBy;
+                        var id = order[0].orderid;
                         console.log(id);
-                        User.findByIdAndUpdate({_id: userid},
-                            {
-                                $push: {"orderid":id}
+                        User.findByIdAndUpdate({ _id: userid }, {
+                                $push: { "orderid": id }
                             },
-                            function (err,order) {
+                            function(err, order) {
                                 if (err) {
                                     console.log(err);
-                                }
-                                else
+                                } else
                                     console.log('orderid pushed');
 
                             });
                     }
 
                 );
-                if(req.body.status == '0') {
-                    var authkey = '101648AeV6o8poG569d48e4';
+                if (req.body.status == '0') {
+                    var authkey = 'my_auth_key';
                     var number = req.body.userContactNo;
-                    var message = 'Hey. Your order has been confirmed. Your ORDER No is ' + req.body.orderNo +'. Your unique code is '+ req.body.uniqueCode +'. Thanks.';
+                    var message = 'Hey. Your order has been confirmed. Your ORDER No is ' + req.body.orderNo + '. Your unique code is ' + req.body.uniqueCode + '. Thanks.';
                     var senderid = 'DSANTA';
                     var route = '4';
                     var dialcode = '91';
 
-                    msg91.sendOne(authkey, number, message, senderid, route, dialcode, function (response) {
+                    msg91.sendOne(authkey, number, message, senderid, route, dialcode, function(response) {
 
                         console.log(response);
                     });
 
 
-                }
-                else if(req.body.status=='-3'){
+                } else if (req.body.status == '-3') {
 
-                    var authkey = '101648AeV6o8poG569d48e4';
+                    var authkey = 'my_auth_key';
                     var number = req.body.userContactNo;
                     var message = 'Hey. Your order has been rejected by restaurant. Please contact our representative at 7611048225. Thanks.';
                     var senderid = 'DSANTA';
                     var route = '4';
                     var dialcode = '91';
 
-                    msg91.sendOne(authkey, number, message, senderid, route, dialcode, function (response) {
+                    msg91.sendOne(authkey, number, message, senderid, route, dialcode, function(response) {
 
                         console.log(response);
                     });
 
                 }
 
-                res.json({message: 'Status Changed'});
+                res.json({ message: 'Status Changed' });
 
             });
 
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
 
@@ -984,15 +940,15 @@ module.exports= function(app,express){
     //    COLLEGES     //
     //                 //
 
-    api.post('/addcollege', function (req, res) {
-        var result=ifAdmin(req.decoded.tag);
-        if(result == true){
+    api.post('/addcollege', function(req, res) {
+        var result = ifAdmin(req.decoded.tag);
+        if (result == true) {
             var college = new Allcollege({
                 name: req.body.name,
-                city:req.body.city
+                city: req.body.city
             });
-            college.save(function(err){
-                if(err){
+            college.save(function(err) {
+                if (err) {
                     res.send(err);
                     return;
                 }
@@ -1001,8 +957,7 @@ module.exports= function(app,express){
                     message: 'college added'
                 });
             });
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
     });
@@ -1012,30 +967,29 @@ module.exports= function(app,express){
     //                 //
 
     //ADD RESTAURANT BY ADMIN
-    api.post('/addrest',function(req,res){
-        var result=ifAdmin(req.decoded.tag);
-        if(result == true){
+    api.post('/addrest', function(req, res) {
+        var result = ifAdmin(req.decoded.tag);
+        if (result == true) {
             var restaurant = new Restaurant({
                 nameOfRestaurant: req.body.nameOfRestaurant,
                 ownerOfRestaurant: req.body.ownerOfRestaurant,
                 username: req.body.username,
-                contactNo:req.body.contactNo,
-                college:req.body.college,
-                address:req.body.address,
+                contactNo: req.body.contactNo,
+                college: req.body.college,
+                address: req.body.address,
                 password: req.body.password,
-                pickupTime:req.body.pickupTime,
+                pickupTime: req.body.pickupTime,
                 status: '1'
             });
 
-            restaurant.save(function(err){
-                if(err){
+            restaurant.save(function(err) {
+                if (err) {
                     res.send(err);
                     return;
                 }
-                res.json({message: 'restaurant added'});
+                res.json({ message: 'restaurant added' });
             });
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
 
@@ -1043,19 +997,18 @@ module.exports= function(app,express){
 
     //UPDATE RESTAURANT NAME BY ADMIN
     api.route('/updaterestname')
-        .post(function (req, res) {
-            var result=ifAdmin(req.decoded.tag);
-            if(result == true){
+        .post(function(req, res) {
+            var result = ifAdmin(req.decoded.tag);
+            if (result == true) {
                 var newname;
-                Restaurant.update({"nameOfRestaurant": req.body.name},{$set:{'nameOfRestaurant': req.body.newname}}, function (err, name) {
-                    if(err){
+                Restaurant.update({ "nameOfRestaurant": req.body.name }, { $set: { 'nameOfRestaurant': req.body.newname } }, function(err, name) {
+                    if (err) {
                         res.send(err);
                         return;
                     }
                     res.json(name);
                 })
-            }
-            else
+            } else
                 res.send("You can't access this api");
             return;
 
@@ -1064,19 +1017,18 @@ module.exports= function(app,express){
 
     //UPDATE RESTAURANT COLLEGE BY ADMIN
     api.route('/updaterestcollege')
-        .post(function (req, res) {
-            var result=ifAdmin(req.decoded.tag);
-            if(result == true){
+        .post(function(req, res) {
+            var result = ifAdmin(req.decoded.tag);
+            if (result == true) {
                 var newcollege;
-                Restaurant.update({"nameOfRestaurant": req.body.name},{$set:{'college': req.body.newcollege}}, function (err, college) {
-                    if(err){
+                Restaurant.update({ "nameOfRestaurant": req.body.name }, { $set: { 'college': req.body.newcollege } }, function(err, college) {
+                    if (err) {
                         res.send(err);
                         return;
                     }
                     res.json(college);
                 })
-            }
-            else
+            } else
                 res.send("You can't access this api");
             return;
 
@@ -1086,20 +1038,19 @@ module.exports= function(app,express){
 
     //DELETE RESTAURANT BY ADMIN
     api.route('/deleterest')
-        .post(function(req,res){
-            var result=ifAdmin(req.decoded.tag);
-            if(result == true){
+        .post(function(req, res) {
+            var result = ifAdmin(req.decoded.tag);
+            if (result == true) {
                 Restaurant.remove({
                     "nameOfRestaurant": req.body.name
-                }, function (err,rest) {
-                    if(err){
+                }, function(err, rest) {
+                    if (err) {
                         res.send(err);
                         return;
                     }
                     res.json(rest);
                 })
-            }
-            else
+            } else
                 res.send("You can't access this api");
             return;
 
@@ -1107,20 +1058,19 @@ module.exports= function(app,express){
     //DELETE MENU BY ADMIN
 
     api.route('/deletedish')
-        .post(function(req,res){
-            var result=ifAdmin(req.decoded.tag);
-            if(result == true){
+        .post(function(req, res) {
+            var result = ifAdmin(req.decoded.tag);
+            if (result == true) {
                 Menu.remove({
                     "_id": req.body.id
-                }, function (err,rest) {
-                    if(err){
+                }, function(err, rest) {
+                    if (err) {
                         res.send(err);
                         return;
                     }
                     res.json(rest);
                 })
-            }
-            else
+            } else
                 res.send("You can't access this api");
             return;
 
@@ -1128,28 +1078,27 @@ module.exports= function(app,express){
 
 
     // ADD DISH TO MENU  BY ADMIN//
-    api.post('/menubyadmin',function (req,res) {
-        var result=ifAdmin(req.decoded.tag);
-        if(result == true){
+    api.post('/menubyadmin', function(req, res) {
+        var result = ifAdmin(req.decoded.tag);
+        if (result == true) {
             var menu = new Menu({
                 restaurant: req.body.restaurant,
                 nameOfDish: req.body.nameOfDish,
                 priceOfDish: req.body.priceOfDish,
                 typeOfDish: req.body.typeOfDish,
                 vegOrNonVeg: req.body.vegOrNonVeg,
-                dishStatus:"1"
+                dishStatus: "1"
             });
 
-            menu.save(function(err){
-                if(err){
+            menu.save(function(err) {
+                if (err) {
                     res.send(err);
                     return
                 }
                 res.json(menu);
             });
 
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
 
@@ -1158,9 +1107,9 @@ module.exports= function(app,express){
 
     // ADD DISH TO MENU  BY RESTAURANT//
 
-    api.post('/menubyrest',function (req,res) {
-        var result=ifRestaurant(req.decoded.tag);
-        if(result == true){
+    api.post('/menubyrest', function(req, res) {
+        var result = ifRestaurant(req.decoded.tag);
+        if (result == true) {
             var menu = new Menu({
                 restaurant: req.body.restaurant,
                 nameOfDish: req.body.nameOfDish,
@@ -1168,117 +1117,111 @@ module.exports= function(app,express){
                 typeOfDish: req.body.typeOfDish,
                 vegOrNonVeg: req.body.vegOrNonVeg,
 
-                dishStatus:"0"
+                dishStatus: "0"
             });
 
-            menu.save(function(err){
-                if(err){
+            menu.save(function(err) {
+                if (err) {
                     res.send(err);
                     return
                 }
-                res.json({message: "menu Updated"})
+                res.json({ message: "menu Updated" })
             });
 
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
 
     });
     //APPROVAL OF DISH BY ADMIN//
-    api.post('/approveupdate',function(req,res){
-        var result=ifAdmin(req.decoded.tag);
-        if(result == true){
-            Menu.find({"restaurant":req.body.restaurant, "nameOfDish":req.body.nameOfDish}).update({$set:{dishStatus:1}},function(err,menu){
-                if(err){
+    api.post('/approveupdate', function(req, res) {
+        var result = ifAdmin(req.decoded.tag);
+        if (result == true) {
+            Menu.find({ "restaurant": req.body.restaurant, "nameOfDish": req.body.nameOfDish }).update({ $set: { dishStatus: 1 } }, function(err, menu) {
+                if (err) {
                     res.send(err);
                     return;
                 }
                 res.json(menu);
 
             })
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
 
     });
     //SHOW APIS ASKED TO APPROVE
-    api.get('/requesttoapprove',function(req,res){
-        var result=ifAdmin(req.decoded.tag);
-        if(result == true){
-            Menu.find({"status":'0'},function(err,menu){
-                if(err){
+    api.get('/requesttoapprove', function(req, res) {
+        var result = ifAdmin(req.decoded.tag);
+        if (result == true) {
+            Menu.find({ "status": '0' }, function(err, menu) {
+                if (err) {
                     res.send(err);
                     return;
                 }
                 res.json(menu);
 
             })
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
 
     });
 
     //UPDATE PRICE BY RESTAURANT
-    api.post('/updatepricebyrest',function(req,res){
-        var result=ifRestaurant(req.decoded.tag);
-        if(result == true){
-            Menu.find({"restaurant":req.body.restaurant,"nameOfDish": req.body.nameOfDish}).update({$set:{priceOfDish:req.body.priceOfDish,dishStatus:'0'}}, function (err, menu) {
-                if(err){
+    api.post('/updatepricebyrest', function(req, res) {
+        var result = ifRestaurant(req.decoded.tag);
+        if (result == true) {
+            Menu.find({ "restaurant": req.body.restaurant, "nameOfDish": req.body.nameOfDish }).update({ $set: { priceOfDish: req.body.priceOfDish, dishStatus: '0' } }, function(err, menu) {
+                if (err) {
                     res.send(err);
                     return;
                 }
                 res.json(menu);
             })
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
 
     });
 
     //UPDATE PRICE BY ADMIN
-    api.post('/updatepricebyadmin',function(req,res){
-        var result=ifAdmin(req.decoded.tag);
-        if(result == true){
-            Menu.find({"restaurant":req.body.restaurant,"nameOfDish":req.body.nameOfDish}).update({$set:{priceOfDish:req.body.priceOfDish,dishStatus:'1'}}, function (err, menu) {
-                if(err){
+    api.post('/updatepricebyadmin', function(req, res) {
+        var result = ifAdmin(req.decoded.tag);
+        if (result == true) {
+            Menu.find({ "restaurant": req.body.restaurant, "nameOfDish": req.body.nameOfDish }).update({ $set: { priceOfDish: req.body.priceOfDish, dishStatus: '1' } }, function(err, menu) {
+                if (err) {
                     res.send(err);
                     return;
                 }
                 res.json(menu);
             })
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
 
     });
 
     //REMOVE DISH BY RESTAURANT
-    api.post('/removedishbyrest',function(req,res){
-        var result=ifRestaurant(req.decoded.tag);
-        if(result == true){
-            Menu.find({"restaurant":req.decoded.restaurant,"nameOfDish":req.body.nameOfDish}).update({$set:{status:'1'}}, function (err, menu) {
-                if(err){
+    api.post('/removedishbyrest', function(req, res) {
+        var result = ifRestaurant(req.decoded.tag);
+        if (result == true) {
+            Menu.find({ "restaurant": req.decoded.restaurant, "nameOfDish": req.body.nameOfDish }).update({ $set: { status: '1' } }, function(err, menu) {
+                if (err) {
                     res.send(err);
                     return;
                 }
                 res.json(menu);
             })
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
     });
     //REMOVE DISH BY ADMIN
-    api.post('/removedishbyadmin',function(req,res){
-        var result=ifAdmin(req.decoded.tag);
-        if(result == true){
-            Menu.find({"restaurant":req.body.name,"nameOfDish":req.body.nameOfDish},function (err, menu) {
+    api.post('/removedishbyadmin', function(req, res) {
+        var result = ifAdmin(req.decoded.tag);
+        if (result == true) {
+            Menu.find({ "restaurant": req.body.name, "nameOfDish": req.body.nameOfDish }, function(err, menu) {
                 if (err) {
                     res.send(err);
                     return;
@@ -1286,58 +1229,54 @@ module.exports= function(app,express){
                 menu[0].remove();
                 res.json(menu);
             });
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
     });
     //SHOW ALL THE DISHES WHICH A RESTAURANT WANTS TO REMOVE
-    api.get('/removerequest',function(req,res){
-        var result=ifAdmin(req.decoded.tag);
-        if(result == true){
-            Menu.find({status:'-1'},function(err,menu){
-                if(err){
+    api.get('/removerequest', function(req, res) {
+        var result = ifAdmin(req.decoded.tag);
+        if (result == true) {
+            Menu.find({ status: '-1' }, function(err, menu) {
+                if (err) {
                     res.send(err);
                     return;
                 }
                 res.json(menu);
             })
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
 
     });
 
     //UNAVAILABLE DISH BY RESTAURANT
-    api.post('/disabledishbyrest',function(req,res){
-        var result=ifRestaurant(req.decoded.tag);
-        if(result == true){
-            Menu.find({"restaurant":req.decoded.nameOfRestaurant,"nameOfDish":req.body.nameOfDish}).update({$set:{dishStatus:'0'}}, function (err, menu) {
-                if(err){
+    api.post('/disabledishbyrest', function(req, res) {
+        var result = ifRestaurant(req.decoded.tag);
+        if (result == true) {
+            Menu.find({ "restaurant": req.decoded.nameOfRestaurant, "nameOfDish": req.body.nameOfDish }).update({ $set: { dishStatus: '0' } }, function(err, menu) {
+                if (err) {
                     res.send(err);
                     return;
                 }
                 res.json(menu);
             })
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
     });
     //AVAILABLE DISH BY RESTAURANT
-    api.post('/enabledishbyrest',function(req,res){
-        var result=ifRestaurant(req.decoded.tag);
-        if(result == true){
-            Menu.find({"restaurant":req.decoded.nameOfRestaurant,"nameOfDish":req.body.nameOfDish}).update({$set:{dishStatus:'1'}}, function (err, menu) {
-                if(err){
+    api.post('/enabledishbyrest', function(req, res) {
+        var result = ifRestaurant(req.decoded.tag);
+        if (result == true) {
+            Menu.find({ "restaurant": req.decoded.nameOfRestaurant, "nameOfDish": req.body.nameOfDish }).update({ $set: { dishStatus: '1' } }, function(err, menu) {
+                if (err) {
                     res.send(err);
                     return;
                 }
                 res.json(menu);
             })
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
     });
@@ -1347,18 +1286,17 @@ module.exports= function(app,express){
 
     //BLOCK USER
     api.route('/blockuser')
-        .post(function (req, res) {
-            var result=ifAdmin(req.decoded.tag);
-            if(result == true){
-                User.find({"_id": req.body.id}).update({$set:{'active': '0'}}, function (err, user) {
-                    if(err){
+        .post(function(req, res) {
+            var result = ifAdmin(req.decoded.tag);
+            if (result == true) {
+                User.find({ "_id": req.body.id }).update({ $set: { 'active': '0' } }, function(err, user) {
+                    if (err) {
                         res.send(err);
                         return;
                     }
                     res.json(user);
                 })
-            }
-            else
+            } else
                 res.send("You can't access this api");
             return;
         });
@@ -1367,18 +1305,17 @@ module.exports= function(app,express){
 
     //UNBLOCK USER
     api.route('/unblockuser')
-        .post(function (req, res) {
-            var result=ifAdmin(req.decoded.tag);
-            if(result == true){
-                User.find({"_id": req.body.id}).update({$set:{'active': '1'}}, function (err, user) {
-                    if(err){
+        .post(function(req, res) {
+            var result = ifAdmin(req.decoded.tag);
+            if (result == true) {
+                User.find({ "_id": req.body.id }).update({ $set: { 'active': '1' } }, function(err, user) {
+                    if (err) {
                         res.send(err);
                         return;
                     }
                     res.json(user);
                 })
-            }
-            else
+            } else
                 res.send("You can't access this api");
             return;
 
@@ -1389,31 +1326,31 @@ module.exports= function(app,express){
 
     //IF THE STATUS IS ZERO THEN NOTIFY THE USER.
     //ASSIGN DELIVERY BOY TO THE ORDER
-   /* api.post('/assignboy',function(req,res){
-        var result=ifRestaurant(req.decoded.tag);
-        if(result == true){
-            Order.find({orderid:req.body.orderid}).update({$set:{deliveredBy:req.body.timeOfDelivery}},function(err,order){
-                if(err){
-                    res.send(err);
-                    return;
-                }
+    /* api.post('/assignboy',function(req,res){
+         var result=ifRestaurant(req.decoded.tag);
+         if(result == true){
+             Order.find({orderid:req.body.orderid}).update({$set:{deliveredBy:req.body.timeOfDelivery}},function(err,order){
+                 if(err){
+                     res.send(err);
+                     return;
+                 }
 
-                res.json(order);
+                 res.json(order);
 
-            })
-        }
-        else
-            res.send("You can't access this api");
-        return;
+             })
+         }
+         else
+             res.send("You can't access this api");
+         return;
 
-    });*/
+     });*/
 
     // SHOW ALL ORDERS TO THE DELIVERY BOY OF THE PARTICULAR COLLEGE
-    api.get('/getallrest', function (req, res) {
-        var result=ifDeliveryBoy(req.decoded.tag);
-        if(result == true){
-            Order.find({"college": req.decoded.college},{"restaurant":1,_id:0},function(err, orders){
-                if(err){
+    api.get('/getallrest', function(req, res) {
+        var result = ifDeliveryBoy(req.decoded.tag);
+        if (result == true) {
+            Order.find({ "college": req.decoded.college }, { "restaurant": 1, _id: 0 }, function(err, orders) {
+                if (err) {
                     res.send(err);
                     return;
                 }
@@ -1433,8 +1370,7 @@ module.exports= function(app,express){
                 res.json(result);
 
             });
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
     });
@@ -1475,144 +1411,138 @@ module.exports= function(app,express){
     //   // return;
     //});
     //SHOW ALL ORDERS TO THE DELIVERY BOY
-    api.post('/allorderstoboy',function(req,res){
-        var result=ifDeliveryBoy(req.decoded.tag);
+    api.post('/allorderstoboy', function(req, res) {
+        var result = ifDeliveryBoy(req.decoded.tag);
         var date = new Date();
         date = moment(date).tz("Asia/Kolkata").format('YYYYMMDD');
 
-        if(result == true){
-            Order.find({"date":date},function(err,order){
-                if(err){
+        if (result == true) {
+            Order.find({ "date": date }, function(err, order) {
+                if (err) {
                     res.send(err);
                     return;
                 }
                 res.json(order);
             })
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
 
     });
 
     //SHOW ORDERS OF A PARTICULAR RESTAURANT TO THE DELIVERY BOY//
-    api.post('/allorderstoboyofrest',function(req,res){
-        var result=ifDeliveryBoy(req.decoded.tag);
+    api.post('/allorderstoboyofrest', function(req, res) {
+        var result = ifDeliveryBoy(req.decoded.tag);
         var date = new Date();
         date = moment(date).tz("Asia/Kolkata").format('YYYYMMDD');
 
-        if(result == true){
-            Order.find({"date":date,"restaurant":req.body.restaurant},function(err,order){
-                if(err){
+        if (result == true) {
+            Order.find({ "date": date, "restaurant": req.body.restaurant }, function(err, order) {
+                if (err) {
                     res.send(err);
                     return;
                 }
                 res.json(order);
             })
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
 
     });
 
-    api.post('/allresttoboy',function(req,res){
-        var result=ifDeliveryBoy(req.decoded.tag);
+    api.post('/allresttoboy', function(req, res) {
+        var result = ifDeliveryBoy(req.decoded.tag);
         var date = new Date();
         date = moment(date).tz("Asia/Kolkata").format('YYYYMMDD');
 
-        if(result == true){
-            Order.find({"date":date,"status":'0'}).distinct("restaurant",function(err,order){
-                if(err){
+        if (result == true) {
+            Order.find({ "date": date, "status": '0' }).distinct("restaurant", function(err, order) {
+                if (err) {
                     res.send(err);
                     return;
                 }
-                var len=order.length;
-                var array=[];
-                for(var i=0;i<len;i++){
-                    data={restaurant:order[i]};
+                var len = order.length;
+                var array = [];
+                for (var i = 0; i < len; i++) {
+                    data = { restaurant: order[i] };
                     array.push(data);
                 }
                 res.json(array);
             })
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
     });
 
-    api.post('/addbags', function (req, res) {
-    var result=ifDeliveryBoy(req.decoded.tag);
-    if(result == true){
-        Order.update({"orderNo":req.body.orderNo},{$set:{bags:req.body.bags}}, function (err, order) {
-            if(err){
-                res.send(err);
-                return;
-            }
-            res.json({message: "bags added"});
-        })
-    }
-    else
-        res.send("You can't access this api");
-    return;
-});
+    api.post('/addbags', function(req, res) {
+        var result = ifDeliveryBoy(req.decoded.tag);
+        if (result == true) {
+            Order.update({ "orderNo": req.body.orderNo }, { $set: { bags: req.body.bags } }, function(err, order) {
+                if (err) {
+                    res.send(err);
+                    return;
+                }
+                res.json({ message: "bags added" });
+            })
+        } else
+            res.send("You can't access this api");
+        return;
+    });
 
 
     //CHANGE STATUS WHEN ITEMS DELIVERED AND DELETE ORDERID FROM THE USER
-    api.post('/changestatusbyboy',function(req,res){
-        var result=ifDeliveryBoy(req.decoded.tag);
-        if(result == true){
-            Order.update({"orderNo":req.body.orderNo},{$set:{'status': '1'}}, function (err,order) {
-                if(err){
+    api.post('/changestatusbyboy', function(req, res) {
+        var result = ifDeliveryBoy(req.decoded.tag);
+        if (result == true) {
+            Order.update({ "orderNo": req.body.orderNo }, { $set: { 'status': '1' } }, function(err, order) {
+                if (err) {
                     res.send(err);
                     return;
                 }
                 res.json(order);
             })
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
     });
 
     //UPDATE THE POSITION OF DELIVERY BOY
     api.route('/updateposition')
-        .post(function (req, res) {
-            var result=ifDeliveryBoy(req.decoded.tag);
-            if(result == true){
-                DeliveryBoy.update({"_id": req.body.id},{$set:{'lat': req.body.lat,'long':req.body.long}}, function (err,boy) {
-                    if(err){
+        .post(function(req, res) {
+            var result = ifDeliveryBoy(req.decoded.tag);
+            if (result == true) {
+                DeliveryBoy.update({ "_id": req.body.id }, { $set: { 'lat': req.body.lat, 'long': req.body.long } }, function(err, boy) {
+                    if (err) {
                         res.send(err);
                         return;
                     }
                     res.json(boy);
                 })
-            }
-            else
+            } else
                 res.send("You can't access this api");
             return;
 
         });
     //GET LOCATION BY THE USER
-    api.get('/tracklocation',function(req,res){
-        var result=ifUser(req.decoded.tag);
-        if(result == true){
-            User.find({_id:req.decoded.id},function(err,user) {
-                if(err){
+    api.get('/tracklocation', function(req, res) {
+        var result = ifUser(req.decoded.tag);
+        if (result == true) {
+            User.find({ _id: req.decoded.id }, function(err, user) {
+                if (err) {
                     res.send(err);
                     return;
                 }
-                var oid=user[0].orderid[0];
+                var oid = user[0].orderid[0];
                 console.log(oid);
-                Order.find({orderid:oid},function(err,order){
-                    if(err){
+                Order.find({ orderid: oid }, function(err, order) {
+                    if (err) {
                         res.send(err);
                         return;
                     }
-                    var did=order.deliveredBy;
+                    var did = order.deliveredBy;
                     console.log(did);
-                    DeliveryBoy.find({'delid':did},function(err,boy){
-                        if(err){
+                    DeliveryBoy.find({ 'delid': did }, function(err, boy) {
+                        if (err) {
                             res.send(err);
                             return;
                         }
@@ -1622,106 +1552,101 @@ module.exports= function(app,express){
 
             });
 
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
 
     });
 
     //HISTORY OF THE ORDERS BY USER
-    api.post('/userhistory',function(req,res){
-        var result=ifUser(req.decoded.tag);
-        if(result==true){
-            Order.find({'username':req.decoded.id},function(err,order){
-                if(err){
+    api.post('/userhistory', function(req, res) {
+        var result = ifUser(req.decoded.tag);
+        if (result == true) {
+            Order.find({ 'username': req.decoded.id }, function(err, order) {
+                if (err) {
                     res.send(err);
                     return;
-                }
-                else
+                } else
                     res.json(order);
             })
         }
     });
+    
     //HISTORY OF THE ORDERS OF A RESTAURANT
-    api.post('/resthistory',function(req,res){
-        var result=ifRestaurant(req.decoded.tag);
-        if(result==true){
-            Order.find({'restaurant':req.decoded.restaurant},function(err,order){
-                if(err){
+    api.post('/resthistory', function(req, res) {
+        var result = ifRestaurant(req.decoded.tag);
+        if (result == true) {
+            Order.find({ 'restaurant': req.decoded.restaurant }, function(err, order) {
+                if (err) {
                     res.send(err);
                     return;
-                }
-                else
+                } else
                     res.json(order);
             })
         }
     });
 
     //APPROVAL OF DISH BY ADMIN//
-    api.post('/about',function(req,res){
-        var result=ifAdmin(req.decoded.tag);
-        if(result == true){
+    api.post('/about', function(req, res) {
+        var result = ifAdmin(req.decoded.tag);
+        if (result == true) {
             var details = new Details({
                 about: req.body.about
             });
 
-            details.save(function(err){
-                if(err){
+            details.save(function(err) {
+                if (err) {
                     res.send(err);
                     return;
                 }
-                res.json({message: 'about added'});
+                res.json({ message: 'about added' });
             });
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
 
     });
     //APPROVAL OF DISH BY ADMIN//
-    api.post('/privacy',function(req,res){
-        var result=ifAdmin(req.decoded.tag);
-        if(result == true){
+    api.post('/privacy', function(req, res) {
+        var result = ifAdmin(req.decoded.tag);
+        if (result == true) {
             var details = new Details({
                 privacy: req.body.privacy
             });
 
-            details.save(function(err){
-                if(err){
+            details.save(function(err) {
+                if (err) {
                     res.send(err);
                     return;
                 }
-                res.json({message: 'privacy added'});
+                res.json({ message: 'privacy added' });
             });
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
 
     });
     //APPROVAL OF DISH BY ADMIN//
-    api.post('/about',function(req,res){
-        var result=ifAdmin(req.decoded.tag);
-        if(result == true){
+    api.post('/about', function(req, res) {
+        var result = ifAdmin(req.decoded.tag);
+        if (result == true) {
             var details = new Details({
                 terms: req.body.terms
             });
 
-            details.save(function(err){
-                if(err){
+            details.save(function(err) {
+                if (err) {
                     res.send(err);
                     return;
                 }
-                res.json({message: 'privacy added'});
+                res.json({ message: 'privacy added' });
             });
-        }
-        else
+        } else
             res.send("You can't access this api");
         return;
 
     });
-    api.post('/me',function(req,res){
+    api.post('/me', function(req, res) {
         res.json(req.decoded);
 
     });
